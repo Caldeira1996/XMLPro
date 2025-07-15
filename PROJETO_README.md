@@ -157,3 +157,7 @@ Para dúvidas ou sugestões sobre este projeto de demonstração, consulte a doc
 ---
 
 *Este projeto foi desenvolvido como uma demonstração de funcionalidades para integração com a SEFaz SP.*
+
+---
+Desenvolvido por: **Lucas Caldeira**
+Contato: lucas@email.com
