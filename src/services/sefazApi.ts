@@ -1,5 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { parseString } from 'xml2js';
+import https from 'https';
+import fs from 'fs';
 
 interface SefazApiConfig {
   baseURL: string;
@@ -41,29 +43,67 @@ class SefazApiService {
     timeout: 30000
   };
 
-  constructor() {
-    this.api = axios.create({
-      baseURL: this.baseConfig.baseURL,
-      timeout: this.baseConfig.timeout,
-      headers: {
-        'Content-Type': 'application/soap+xml; charset=utf-8',
-        'SOAPAction': ''
-      }
-    });
+  // constructor() {
+  //   this.api = axios.create({
+  //     baseURL: this.baseConfig.baseURL,
+  //     timeout: this.baseConfig.timeout,
+  //     headers: {
+  //       'Content-Type': 'application/soap+xml; charset=utf-8',
+  //       'SOAPAction': ''
+  //     }
+  //   });
 
-    // Interceptador para adicionar certificado nas requisições
-    this.api.interceptors.request.use((config) => {
-      if (this.certificate) {
-        // Em um ambiente real, você configuraria o certificado aqui
-        // config.httpsAgent = new https.Agent({ ... });
-      }
-      return config;
-    });
+  //   // Interceptador para adicionar certificado nas requisições
+  //   this.api.interceptors.request.use((config) => {
+  //     if (this.certificate) {
+  //       // Em um ambiente real, você configuraria o certificado aqui
+  //       // config.httpsAgent = new https.Agent({ ... });
+  //     }
+  //     return config;
+  //   });
+  // }
+
+  // public setCertificate(certificate: CertificateConfig): void {
+  //   this.certificate = certificate;
+  // }
+
+constructor() {
+  this.api = this.createAxiosInstance();
+}
+
+private createAxiosInstance(): AxiosInstance {
+  const agent = this.certificate ? this.createHttpsAgent(this.certificate) : undefined;
+
+  return axios.create({
+    baseURL: this.baseConfig.baseURL,
+    timeout: this.baseConfig.timeout,
+    headers: {
+      'Content-Type': 'application/soap+xml; charset=utf-8',
+      'SOAPAction': ''
+    },
+    httpsAgent: agent
+  });
+}
+
+private createHttpsAgent(certificate: CertificateConfig): https.Agent {
+  if (!fs.existsSync(certificate.pfxPath)) {
+    throw new Error(`Certificado não encontrado em: ${certificate.pfxPath}`);
   }
 
-  public setCertificate(certificate: CertificateConfig): void {
-    this.certificate = certificate;
-  }
+  const pfx = fs.readFileSync(certificate.pfxPath);
+  return new https.Agent({
+    pfx,
+    passphrase: certificate.password,
+    rejectUnauthorized: true
+  });
+}
+
+
+public setCertificate(certificate: CertificateConfig): void {
+  this.certificate = certificate;
+  this.api = this.createAxiosInstance(); // recria a instância com o novo certificado
+}
+
 
   public async consultarXMLs(request: XmlConsultaRequest): Promise<SefazResponse> {
     try {
@@ -105,30 +145,30 @@ class SefazApiService {
     }
   }
 
-  public async validarCertificado(certificatePath: string, password: string): Promise<SefazResponse> {
-    try {
-      // Simula validação do certificado
-      // Em um ambiente real, isso seria feito com uma biblioteca de criptografia
-      const mockValidation = {
-        valid: true,
-        subject: 'CN=EMPRESA TESTE:12345678000195, OU=Certificado PJ A1, O=ICP-Brasil, C=BR',
-        issuer: 'AC CERTISIGN RFB G5',
-        validFrom: new Date('2024-01-01'),
-        validTo: new Date('2025-12-31'),
-        serialNumber: '123456789'
-      };
+  // public async validarCertificado(certificatePath: string, password: string): Promise<SefazResponse> {
+  //   try {
+  //     // Simula validação do certificado
+  //     // Em um ambiente real, isso seria feito com uma biblioteca de criptografia
+  //     const mockValidation = {
+  //       valid: true,
+  //       subject: 'CN=EMPRESA TESTE:12345678000195, OU=Certificado PJ A1, O=ICP-Brasil, C=BR',
+  //       issuer: 'AC CERTISIGN RFB G5',
+  //       validFrom: new Date('2024-01-01'),
+  //       validTo: new Date('2025-12-31'),
+  //       serialNumber: '123456789'
+  //     };
 
-      return {
-        success: true,
-        data: mockValidation
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro na validação do certificado'
-      };
-    }
-  }
+  //     return {
+  //       success: true,
+  //       data: mockValidation
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       error: error instanceof Error ? error.message : 'Erro na validação do certificado'
+  //     };
+  //   }
+  // }
 
   private buildConsultaSoapEnvelope(request: XmlConsultaRequest): string {
     return `<?xml version="1.0" encoding="utf-8"?>
