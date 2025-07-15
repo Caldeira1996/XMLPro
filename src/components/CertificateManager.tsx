@@ -7,11 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Plus, 
-  Upload, 
-  Shield, 
-  Trash2, 
+import {
+  Plus,
+  Upload,
+  Shield,
+  Trash2,
   Edit,
   CheckCircle,
   AlertCircle,
@@ -40,15 +40,16 @@ interface CertificateManagerProps {
   selectedCertificate: string;
 }
 
-export function CertificateManager({ 
-  certificates, 
-  onCertificateAdd, 
-  onCertificateRemove, 
-  onCertificateSelect, 
-  selectedCertificate 
+export function CertificateManager({
+  certificates,
+  onCertificateAdd,
+  onCertificateRemove,
+  onCertificateSelect,
+  selectedCertificate
 }: CertificateManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [fileObject, setFileObject] = useState<File | null>(null);
   const [newCertificate, setNewCertificate] = useState({
     name: '',
     filePath: '',
@@ -58,6 +59,7 @@ export function CertificateManager({
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setFileObject(file); // GUARDA o arquivo real para enviar ao backend
       setNewCertificate({
         ...newCertificate,
         filePath: file.name,
@@ -66,7 +68,82 @@ export function CertificateManager({
     }
   };
 
-  const validateAndAddCertificate = async () => {
+  const uploadCertificateToBackend = async () => {
+    if (!fileObject || !newCertificate.password) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione o arquivo e informe a senha',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      // ... seu fetch
+    } catch (error) {
+      // ... tratamento de erro
+    } finally {
+      setIsValidating(false);
+    }
+
+    const formData = new FormData();
+    formData.append('certFile', fileObject);
+    formData.append('password', newCertificate.password);
+    formData.append('name', newCertificate.name);
+
+    try {
+      const response = await fetch('/api/upload-cert', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: 'Sucesso',
+          description: `Certificado ${newCertificate.name} enviado para backend.`,
+        });
+
+        // Opcional: Adiciona localmente no frontend (com os dados mínimos)
+        const certificate: Certificate = {
+          id: Date.now().toString(),
+          name: newCertificate.name,
+          issuer: '',
+          validUntil: '',
+          validFrom: '',
+          status: 'valid',
+          subject: '',
+          serialNumber: '',
+          filePath: newCertificate.filePath,
+        };
+        onCertificateAdd(certificate);
+
+        // Limpa estados e fecha modal
+        setNewCertificate({ name: '', filePath: '', password: '' });
+        setFileObject(null);
+        setIsDialogOpen(false);
+
+      } else {
+        toast({
+          title: 'Erro',
+          description: result.error || 'Falha no upload do certificado',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao enviar certificado para o backend',
+        variant: 'destructive',
+      });
+    }
+  };
+
+
+
+  const validateAndAddCertificate = () => {
     if (!newCertificate.name || !newCertificate.filePath || !newCertificate.password) {
       toast({
         title: "Erro",
@@ -76,61 +153,28 @@ export function CertificateManager({
       return;
     }
 
-    setIsValidating(true);
+    const certificate: Certificate = {
+      id: Date.now().toString(),
+      name: newCertificate.name,
+      issuer: '',
+      validUntil: '',
+      validFrom: '',
+      status: 'valid',  // ou você pode criar um status padrão
+      subject: '',
+      serialNumber: '',
+      filePath: newCertificate.filePath
+    };
 
-    try {
-      const validation = await sefazApi.validarCertificado(newCertificate.filePath, newCertificate.password);
-      
-      if (validation.success && validation.data) {
-        const certData = validation.data;
-        const now = new Date();
-        const validUntil = new Date(certData.validTo);
-        const daysUntilExpiry = Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
-        let status: 'valid' | 'expired' | 'warning' = 'valid';
-        if (validUntil < now) {
-          status = 'expired';
-        } else if (daysUntilExpiry <= 30) {
-          status = 'warning';
-        }
+    onCertificateAdd(certificate);
+    setNewCertificate({ name: '', filePath: '', password: '' });
+    setIsDialogOpen(false);
 
-        const certificate: Certificate = {
-          id: Date.now().toString(),
-          name: newCertificate.name,
-          issuer: certData.issuer,
-          validUntil: validUntil.toISOString().split('T')[0],
-          validFrom: new Date(certData.validFrom).toISOString().split('T')[0],
-          status,
-          subject: certData.subject,
-          serialNumber: certData.serialNumber,
-          filePath: newCertificate.filePath
-        };
-
-        onCertificateAdd(certificate);
-        setNewCertificate({ name: '', filePath: '', password: '' });
-        setIsDialogOpen(false);
-        
-        toast({
-          title: "Certificado adicionado",
-          description: `Certificado ${certificate.name} foi adicionado com sucesso.`,
-        });
-      } else {
-        toast({
-          title: "Erro na validação",
-          description: validation.error || "Não foi possível validar o certificado.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao validar o certificado.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsValidating(false);
-    }
+    toast({
+      title: "Certificado adicionado",
+      description: `Certificado ${certificate.name} foi adicionado com sucesso.`,
+    });
   };
+
 
   const handleRemoveCertificate = (id: string) => {
     onCertificateRemove(id);
@@ -197,7 +241,7 @@ export function CertificateManager({
                     <Input
                       id="cert-name"
                       value={newCertificate.name}
-                      onChange={(e) => setNewCertificate({...newCertificate, name: e.target.value})}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, name: e.target.value })}
                       placeholder="Ex: Certificado da Empresa XYZ"
                     />
                   </div>
@@ -225,7 +269,7 @@ export function CertificateManager({
                       id="cert-password"
                       type="password"
                       value={newCertificate.password}
-                      onChange={(e) => setNewCertificate({...newCertificate, password: e.target.value})}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, password: e.target.value })}
                       placeholder="Digite a senha do certificado"
                     />
                   </div>
@@ -234,8 +278,8 @@ export function CertificateManager({
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={validateAndAddCertificate} disabled={isValidating}>
-                    {isValidating ? 'Validando...' : 'Adicionar'}
+                  <Button onClick={uploadCertificateToBackend} disabled={isValidating}>
+                    {isValidating ? 'Enviando...' : 'Adicionar'}
                   </Button>
                 </div>
               </DialogContent>
@@ -295,7 +339,7 @@ export function CertificateManager({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza de que deseja remover o certificado "{cert.name}"? 
+                            Tem certeza de que deseja remover o certificado "{cert.name}"?
                             Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
