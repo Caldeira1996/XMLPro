@@ -60,3 +60,5 @@ npm install
 
 # 4. Rode o projeto
 npm run dev
+
+© 2025 – XMLPro por Lucas Caldeira
