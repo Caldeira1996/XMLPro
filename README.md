@@ -24,3 +24,39 @@ Contato: lucas@email.com
 
 ## 📦 Estrutura de Pastas
 
+src/
+├── components/
+│ ├── XmlDashboard.tsx # Painel principal
+│ ├── NotificationCenter.tsx # Sistema de alertas
+│ └── ui/ # Componentes reutilizáveis
+├── pages/
+│ └── Index.tsx # Página inicial
+├── hooks/
+│ └── use-toast.ts # Notificações personalizadas
+├── assets/
+│ └── sefaz-logo.png # Logotipo da aplicação
+└── App.css # Estilos gerais
+
+
+---
+
+## ⚙️ Como rodar localmente
+
+Pré-requisitos:
+- Node.js (versão 18 ou superior)
+- npm (ou yarn)
+
+### Passos:
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/Caldeira1996/xmlpro.git
+
+# 2. Acesse a pasta
+cd xmlpro
+
+# 3. Instale as dependências
+npm install
+
+# 4. Rode o projeto
+npm run dev
