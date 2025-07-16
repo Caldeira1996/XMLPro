@@ -9,6 +9,7 @@ interface SefazApiConfig {
 }
 
 interface CertificateConfig {
+  pfxBuffer?: Buffer; 
   pfxPath: string;
   password: string;
   alias?: string;
@@ -85,23 +86,27 @@ private createAxiosInstance(): AxiosInstance {
   });
 }
 
+
 private createHttpsAgent(certificate: CertificateConfig): https.Agent {
-  if (!fs.existsSync(certificate.pfxPath)) {
-    throw new Error(`Certificado não encontrado em: ${certificate.pfxPath}`);
+  let pfx: Buffer;
+  if (certificate.pfxBuffer) {
+    pfx = certificate.pfxBuffer;
+  } else if (certificate.pfxPath && fs.existsSync(certificate.pfxPath)) {
+    pfx = fs.readFileSync(certificate.pfxPath);
+  } else {
+    throw new Error('Certificado não encontrado ou buffer não fornecido');
   }
 
-  const pfx = fs.readFileSync(certificate.pfxPath);
   return new https.Agent({
     pfx,
     passphrase: certificate.password,
-    rejectUnauthorized: true
+    rejectUnauthorized: true,
   });
 }
 
-
 public setCertificate(certificate: CertificateConfig): void {
   this.certificate = certificate;
-  this.api = this.createAxiosInstance(); // recria a instância com o novo certificado
+  this.api = this.createAxiosInstance();
 }
 
 
