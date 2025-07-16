@@ -1,8 +1,8 @@
 import { Handler } from '@netlify/functions';
 import https from 'https';
-import { sefazApi } from '../../src/services/sefazApi'; // ajuste o caminho conforme seu projeto
+import { sefazApi } from '@/services/sefazApi'; // ajuste o caminho conforme seu projeto
 import forge from 'node-forge';
-import { validarCertificadoPfx } from '../../src/utils/certificadoConfig';
+import { validarCertificadoPfx } from '@/utils/certificadoConfig';
 
 interface RequestBody {
   certFileBase64: string;
