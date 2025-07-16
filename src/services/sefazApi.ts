@@ -40,7 +40,8 @@ class SefazApiService {
   private api: AxiosInstance;
   private certificate: CertificateConfig | null = null;
   private baseConfig: SefazApiConfig = {
-    baseURL: 'https://nfe.fazenda.sp.gov.br/ws/nfedownload.asmx',
+    baseURL: 'https://nfe.fazenda.sp.gov.br/ws/nfedownload.asmx', // Produção
+    //baseURL: 'https://homologacao.nfe.fazenda.sp.gov.br/ws/nfedownload.asmx', // Homologação
     timeout: 30000
   };
 
