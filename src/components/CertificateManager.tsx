@@ -55,7 +55,7 @@ interface Certificate {
 
 interface CertificateManagerProps {
   certificates: Certificate[];
-  onCertificateAdd: (certificate: Certificate) => void;
+  onCertificateAdd: (certificate: Certificate) => Promise<void>;
   onCertificateRemove: (id: string) => void;
   onCertificateSelect: (id: string) => void;
   selectedCertificate: string;
@@ -131,24 +131,42 @@ export function CertificateManager({
 
       const result = await response.json();
 
+      // if (result.success) {
+      //   toast({
+      //     title: 'Sucesso',
+      //     description: `Certificado ${newCertificate.name} enviado para backend.`
+      //   });
+
+      //   const certificate: Certificate = {
+      //     id: Date.now().toString(),
+      //     name: newCertificate.name,
+      //     issuer: '',
+      //     validUntil: '',
+      //     validFrom: '',
+      //     status: 'valid',
+      //     subject: '',
+      //     serialNumber: '',
+      //     filePath: newCertificate.filePath
+      //   };
+      //   onCertificateAdd(certificate);
+
       if (result.success) {
         toast({
           title: 'Sucesso',
-          description: `Certificado ${newCertificate.name} enviado para backend.`
+          description: `Certificado ${newCertificate.name} validado com sucesso.`
         });
 
         const certificate: Certificate = {
           id: Date.now().toString(),
           name: newCertificate.name,
-          issuer: '',
-          validUntil: '',
-          validFrom: '',
+          issuer: result.data?.issuer || 'Emissor desconhecido',
+          validUntil: result.data?.validUntil || new Date().toISOString().split('T')[0],
+          validFrom: result.data?.validFrom || new Date().toISOString().split('T')[0],
           status: 'valid',
-          subject: '',
-          serialNumber: '',
+          subject: result.data?.subject || '',
+          serialNumber: result.data?.serialNumber || '',
           filePath: newCertificate.filePath
         };
-        onCertificateAdd(certificate);
 
         setNewCertificate({ name: '', filePath: '', password: '' });
         setFileObject(null);

@@ -148,9 +148,52 @@ export default function XmlDashboard() {
     }
   };
 
+  // const handleCertificateAdd = async (certificate: Certificate) => {
+  //   setCertificates([...certificates, certificate]);
+  // };
+
   const handleCertificateAdd = async (certificate: Certificate) => {
-    setCertificates([...certificates, certificate]);
-  };
+  try {
+    // 1. Adiciona à lista
+    setCertificates(prev => [...prev, certificate]);
+    
+    // 2. Configura na API
+    sefazApi.setCertificate({
+      pfxPath: certificate.filePath || '',
+      password: 'senha_armazenada', // Em produção, use um método seguro
+      alias: certificate.name
+    });
+
+    // 3. Testa conexão
+    const connectionTest = await sefazApi.testarConexao();
+    setIsConnected(connectionTest.success);
+
+    // 4. Feedback visual
+    toast({
+      title: connectionTest.success 
+        ? "Certificado válido" 
+        : "Certificado inválido",
+      description: connectionTest.success 
+        ? "Conectado à SEFAZ com sucesso!" 
+        : "Falha na conexão com a SEFAZ",
+      variant: connectionTest.success ? "default" : "destructive"
+    });
+
+    // 5. Seleciona automaticamente se for o único
+    if (certificates.length === 0) {
+      setSelectedCertificate(certificate.id);
+    }
+
+  } catch (error) {
+    console.error("Erro ao validar certificado:", error);
+    setIsConnected(false);
+    toast({
+      title: "Erro na validação",
+      description: "Falha ao testar conexão com a SEFAZ",
+      variant: "destructive"
+    });
+  }
+};
 
   const handleCertificateRemove = (id: string) => {
     setCertificates(certificates.filter(c => c.id !== id));
