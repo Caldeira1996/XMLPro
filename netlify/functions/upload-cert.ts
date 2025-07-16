@@ -40,8 +40,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     // Converte base64 para Buffer
-    //const pfxBuffer = Buffer.from(certFileBase64, 'base64');
-    const pfxBuffer = globalThis.Buffer.from(certFileBase64, 'base64');
+    const pfxBuffer = Buffer.from(certFileBase64, 'base64');
 
 
     // Opcional: criar https.Agent para testar certificado

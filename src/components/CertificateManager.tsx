@@ -1,36 +1,31 @@
 import React, { useState } from 'react';
-import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger
-} from '@/components/ui/dialog';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogTitle, AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import {
-  Plus, Upload, Shield, Trash2, CheckCircle,
-  AlertCircle, Clock, FileKey
+import { 
+  Plus, 
+  Upload, 
+  Shield, 
+  Trash2, 
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  FileKey
 } from 'lucide-react';
 import { sefazApi } from '@/services/sefazApi';
 
-// Types
-export type CertificateStatus = 'valid' | 'expired' | 'warning' | 'pending';
-
-export interface Certificate {
+interface Certificate {
   id: string;
   name: string;
   issuer: string;
   validUntil: string;
   validFrom: string;
-  status: CertificateStatus;
+  status: 'valid' | 'expired' | 'warning';
   subject: string;
   serialNumber: string;
   filePath?: string;
@@ -44,12 +39,12 @@ interface CertificateManagerProps {
   selectedCertificate: string;
 }
 
-export function CertificateManager({
-  certificates,
-  onCertificateAdd,
-  onCertificateRemove,
-  onCertificateSelect,
-  selectedCertificate
+export function CertificateManager({ 
+  certificates, 
+  onCertificateAdd, 
+  onCertificateRemove, 
+  onCertificateSelect, 
+  selectedCertificate 
 }: CertificateManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -72,6 +67,7 @@ export function CertificateManager({
     }
   };
 
+  // Converte arquivo para base64 (sem o prefixo data:...)
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -100,38 +96,52 @@ export function CertificateManager({
     try {
       const certBase64 = await fileToBase64(fileObject);
       const validation = await sefazApi.validarCertificado(certBase64, newCertificate.password);
-
+      
       if (validation.success && validation.data) {
         const certData = validation.data;
         const now = new Date();
         const validUntil = new Date(certData.validTo);
-        const validFrom = new Date(certData.validFrom);
+        const daysUntilExpiry = Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        let status: 'valid' | 'expired' | 'warning' = 'valid';
+        if (validUntil < now) {
+          status = 'expired';
+        } else if (daysUntilExpiry <= 30) {
+          status = 'warning';
+        }
+
+        // Testa conexão com SEFAZ
+        const connectionResult = await sefazApi.testarConexao();
 
         const certificate: Certificate = {
           id: Date.now().toString(),
           name: newCertificate.name,
-          issuer: '',
+          issuer: certData.issuer,
           validUntil: validUntil.toLocaleDateString('pt-BR'),
-          validFrom: validFrom.toLocaleDateString('pt-BR'),
-          status: 'pending',
+          validFrom: new Date(certData.validFrom).toLocaleDateString('pt-BR'),
+          status: connectionResult.success ? status : 'expired',
           subject: certData.subject,
           serialNumber: certData.serialNumber,
           filePath: newCertificate.filePath
         };
 
+        // Configura o certificado no sefazApi
         sefazApi.setCertificate({
           pfxBuffer: Buffer.from(certBase64, 'base64'),
           password: newCertificate.password
         });
 
-        await onCertificateAdd(certificate);
+        onCertificateAdd(certificate);
         setNewCertificate({ name: '', filePath: '', password: '' });
         setFileObject(null);
         setIsDialogOpen(false);
-
+        
         toast({
-          title: "Certificado adicionado",
-          description: `Certificado ${certificate.name} salvo com status 'pending' para validação futura.`,
+          title: connectionResult.success ? "Certificado adicionado" : "Certificado adicionado com aviso",
+          description: connectionResult.success 
+            ? `Certificado ${certificate.name} validado e conectado à SEFAZ`
+            : `Certificado ${certificate.name} válido, mas houve problema na conexão com SEFAZ`,
+          variant: connectionResult.success ? 'default' : 'destructive'
         });
       } else {
         toast({
@@ -155,7 +165,7 @@ export function CertificateManager({
     onCertificateRemove(id);
     toast({
       title: "Certificado removido",
-      description: "O certificado foi removido com sucesso."
+      description: "O certificado foi removido com sucesso.",
     });
   };
 
@@ -167,8 +177,6 @@ export function CertificateManager({
         return <AlertCircle className="w-4 h-4 text-warning" />;
       case 'expired':
         return <Clock className="w-4 h-4 text-destructive" />;
-      case 'pending':
-        return <Shield className="w-4 h-4 text-muted-foreground" />;
       default:
         return <Shield className="w-4 h-4" />;
     }
@@ -182,8 +190,6 @@ export function CertificateManager({
         return <Badge variant="secondary" className="bg-warning text-warning-foreground">Expira em breve</Badge>;
       case 'expired':
         return <Badge variant="destructive">Expirado</Badge>;
-      case 'pending':
-        return <Badge variant="outline">Não Validado</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -220,7 +226,7 @@ export function CertificateManager({
                     <Input
                       id="cert-name"
                       value={newCertificate.name}
-                      onChange={(e) => setNewCertificate({ ...newCertificate, name: e.target.value })}
+                      onChange={(e) => setNewCertificate({...newCertificate, name: e.target.value})}
                       placeholder="Ex: Certificado da Empresa XYZ"
                     />
                   </div>
@@ -248,7 +254,7 @@ export function CertificateManager({
                       id="cert-password"
                       type="password"
                       value={newCertificate.password}
-                      onChange={(e) => setNewCertificate({ ...newCertificate, password: e.target.value })}
+                      onChange={(e) => setNewCertificate({...newCertificate, password: e.target.value})}
                       placeholder="Digite a senha do certificado"
                     />
                   </div>
@@ -318,7 +324,7 @@ export function CertificateManager({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza de que deseja remover o certificado "{cert.name}"?
+                            Tem certeza de que deseja remover o certificado "{cert.name}"? 
                             Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
