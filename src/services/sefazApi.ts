@@ -69,7 +69,7 @@ class SefazApiService {
   // }
 
 constructor() {
-  this.api = this.createAxiosInstance();
+  //this.api = this.createAxiosInstance();
 }
 
 private createAxiosInstance(): AxiosInstance {
@@ -104,11 +104,19 @@ private createHttpsAgent(certificate: CertificateConfig): https.Agent {
   });
 }
 
+// public setCertificate(certificate: CertificateConfig): void {
+//   this.certificate = certificate;
+//   this.api = this.createAxiosInstance();
+// }
+
 public setCertificate(certificate: CertificateConfig): void {
+  if (!certificate.pfxBuffer && !(certificate.pfxPath && fs.existsSync(certificate.pfxPath))) {
+    throw new Error('Certificado inválido: forneça um buffer ou caminho existente');
+  }
+
   this.certificate = certificate;
   this.api = this.createAxiosInstance();
 }
-
 
   public async consultarXMLs(request: XmlConsultaRequest): Promise<SefazResponse> {
     try {
@@ -290,18 +298,28 @@ public setCertificate(certificate: CertificateConfig): void {
 
   public async testarConexao(): Promise<SefazResponse> {
     try {
-      // Testa a conexão com a SEFaz
-      const response = await this.api.get('/ping', { timeout: 5000 });
-      
-      return {
-        success: true,
-        message: 'Conexão estabelecida com sucesso'
-      };
+    // Chave de acesso fictícia, apenas para testar handshake SSL com certificado
+    const chaveFake = '99999999999999999999999999999999999999999999';
+
+    const envelope = this.buildDownloadSoapEnvelope({ chaveAcesso: chaveFake });
+
+    const response = await this.api.post('', envelope, {
+      headers: {
+        'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NfeDownload/nfeDownloadNF'
+      }
+    });
+
+    // Se deu qualquer resposta, é porque a conexão + certificado funcionaram
+    return {
+      success: true,
+      message: 'Certificado configurado corretamente e conexão estabelecida com a SEFAZ'
+    };
+
     } catch (error) {
-      return {
-        success: false,
-        error: 'Falha na conexão com a SEFaz SP'
-      };
+    return {
+      success: false,
+      error: 'Erro ao estabelecer conexão com a SEFAZ usando o certificado: ' + (error instanceof Error ? error.message : 'erro desconhecido')
+    };
     }
   }
 }
