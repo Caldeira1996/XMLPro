@@ -148,9 +148,53 @@ export default function XmlDashboard() {
     }
   };
 
-  const handleCertificateAdd = (certificate: Certificate) => {
-    setCertificates([...certificates, certificate]);
-  };
+  // const handleCertificateAdd = (certificate: Certificate) => {
+  //   setCertificates([...certificates, certificate]);
+  // };
+
+  const handleCertificateAdd = async (certificate: Certificate) => {
+  try {
+    // Adiciona o certificado à lista
+    const updatedCertificates = [...certificates, certificate];
+    setCertificates(updatedCertificates);
+
+    // Configura o certificado na API
+    sefazApi.setCertificate({
+      pfxPath: certificate.filePath || '',
+      password: 'senha_armazenada', // Em produção, use um método seguro
+      alias: certificate.name
+    });
+
+    // Testa a conexão com a SEFAZ
+    const connectionTest = await sefazApi.testarConexao();
+    setIsConnected(connectionTest.success);
+
+    // Feedback visual
+    toast({
+      title: connectionTest.success 
+        ? "Certificado adicionado e validado" 
+        : "Certificado adicionado, mas falha na conexão",
+      description: connectionTest.success 
+        ? "Conexão estabelecida com sucesso." 
+        : connectionTest.error || "Erro ao conectar com a SEFAZ.",
+      variant: connectionTest.success ? "default" : "destructive"
+    });
+
+    // Seleciona automaticamente se for o primeiro certificado
+    if (certificates.length === 0) {
+      setSelectedCertificate(certificate.id);
+    }
+
+  } catch (error) {
+    console.error("Erro ao adicionar certificado:", error);
+    setIsConnected(false);
+    toast({
+      title: "Erro ao validar certificado",
+      description: "Ocorreu um erro ao testar a conexão com a SEFAZ.",
+      variant: "destructive"
+    });
+  }
+};
 
   const handleCertificateRemove = (id: string) => {
     setCertificates(certificates.filter(c => c.id !== id));
