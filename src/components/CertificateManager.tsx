@@ -106,89 +106,86 @@ export function CertificateManager({
 
   // Envia o certificado em base64 + senha + nome para a função Netlify
   const uploadCertificateToBackend = async () => {
-    if (!fileObject || !newCertificate.password) {
+  if (!fileObject || !newCertificate.password) {
+    toast({
+      title: 'Erro',
+      description: 'Selecione o arquivo e informe a senha',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  setIsValidating(true);
+  try {
+    const certBase64 = await fileToBase64(fileObject);
+
+    const response = await fetch('/.netlify/functions/upload-cert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        certFileBase64: certBase64,
+        password: newCertificate.password,
+        name: newCertificate.name
+      })
+    });
+
+    const result = await response.json();
+    console.log('Upload result:', result);
+
+    if (!result.success) {
       toast({
         title: 'Erro',
-        description: 'Selecione o arquivo e informe a senha',
+        description: result.error || 'Falha no upload do certificado',
         variant: 'destructive'
       });
+      setIsValidating(false);
       return;
     }
 
-    setIsValidating(true);
-    try {
-      const certBase64 = await fileToBase64(fileObject);
-
-      const response = await fetch('/.netlify/functions/upload-cert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          certFileBase64: certBase64,
-          password: newCertificate.password,
-          name: newCertificate.name
-        })
-      });
-
-      const result = await response.json();
-
-      // if (result.success) {
-      //   toast({
-      //     title: 'Sucesso',
-      //     description: `Certificado ${newCertificate.name} enviado para backend.`
-      //   });
-
-      //   const certificate: Certificate = {
-      //     id: Date.now().toString(),
-      //     name: newCertificate.name,
-      //     issuer: '',
-      //     validUntil: '',
-      //     validFrom: '',
-      //     status: 'valid',
-      //     subject: '',
-      //     serialNumber: '',
-      //     filePath: newCertificate.filePath
-      //   };
-      //   onCertificateAdd(certificate);
-
-      if (result.success) {
-        toast({
-          title: 'Sucesso',
-          description: `Certificado ${newCertificate.name} validado com sucesso.`
-        });
-
-        const certificate: Certificate = {
-          id: Date.now().toString(),
-          name: newCertificate.name,
-          issuer: result.data?.issuer || 'Emissor desconhecido',
-          validUntil: result.data?.validUntil || new Date().toISOString().split('T')[0],
-          validFrom: result.data?.validFrom || new Date().toISOString().split('T')[0],
-          status: 'valid',
-          subject: result.data?.subject || '',
-          serialNumber: result.data?.serialNumber || '',
-          filePath: newCertificate.filePath
-        };
-
-        await onCertificateAdd(certificate);
-        setNewCertificate({ name: '', filePath: '', password: '' });
-        setFileObject(null);
-        setIsDialogOpen(false);
-      } else {
-        toast({
-          title: 'Erro',
-          description: result.error || 'Falha no upload do certificado',
-          variant: 'destructive'
-        });
-      }
-    } catch (error) {
+    // Validação dos dados recebidos
+    if (
+      !result.data?.issuer ||
+      !result.data?.validUntil ||
+      !result.data?.validFrom ||
+      !result.data?.subject ||
+      !result.data?.serialNumber
+    ) {
       toast({
         title: 'Erro',
-        description: 'Erro ao enviar certificado para o backend',
+        description: 'Certificado inválido: faltam campos necessários retornados pelo backend.',
         variant: 'destructive'
       });
-    } finally {
       setIsValidating(false);
+      return;
     }
-  };
+
+    const certificate: Certificate = {
+      id: Date.now().toString(),
+      name: newCertificate.name,
+      issuer: result.data.issuer,
+      validUntil: result.data.validUntil,
+      validFrom: result.data.validFrom,
+      status: 'valid',
+      subject: result.data.subject,
+      serialNumber: result.data.serialNumber,
+      filePath: newCertificate.filePath
+    };
+
+    await onCertificateAdd(certificate);
+    setNewCertificate({ name: '', filePath: '', password: '' });
+    setFileObject(null);
+    setIsDialogOpen(false);
+  } catch (error) {
+    toast({
+      title: 'Erro',
+      description: 'Erro ao enviar certificado para o backend',
+      variant: 'destructive'
+    });
+  } finally {
+    setIsValidating(false);
+  }
+};
+
 
   const handleRemoveCertificate = (id: string) => {
     onCertificateRemove(id);
