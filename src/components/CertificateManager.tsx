@@ -1,24 +1,45 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import {
   Plus,
   Upload,
   Shield,
   Trash2,
-  Edit,
   CheckCircle,
   AlertCircle,
   Clock,
   FileKey
 } from 'lucide-react';
-import { sefazApi } from '@/services/sefazApi';
 
 interface Certificate {
   id: string;
@@ -56,10 +77,11 @@ export function CertificateManager({
     password: ''
   });
 
+  // Captura o arquivo selecionado e atualiza o estado
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setFileObject(file); // GUARDA o arquivo real para enviar ao backend
+      setFileObject(file);
       setNewCertificate({
         ...newCertificate,
         filePath: file.name,
@@ -68,35 +90,43 @@ export function CertificateManager({
     }
   };
 
+  // Converte arquivo para base64 (sem o prefixo data:...)
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Envia o certificado em base64 + senha + nome para a função Netlify
   const uploadCertificateToBackend = async () => {
     if (!fileObject || !newCertificate.password) {
       toast({
         title: 'Erro',
         description: 'Selecione o arquivo e informe a senha',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
 
     setIsValidating(true);
     try {
-      // ... seu fetch
-    } catch (error) {
-      // ... tratamento de erro
-    } finally {
-      setIsValidating(false);
-    }
+      const certBase64 = await fileToBase64(fileObject);
 
-    const formData = new FormData();
-    formData.append('certFile', fileObject);
-    formData.append('password', newCertificate.password);
-    formData.append('name', newCertificate.name);
-
-    try {
-      // const response = await fetch('/api/upload-cert', {
-      const response = await fetch('http://localhost:8080/api/upload-cert', {
+      const response = await fetch('/.netlify/functions/upload-cert', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certFileBase64: certBase64,
+          password: newCertificate.password,
+          name: newCertificate.name
+        })
       });
 
       const result = await response.json();
@@ -104,10 +134,9 @@ export function CertificateManager({
       if (result.success) {
         toast({
           title: 'Sucesso',
-          description: `Certificado ${newCertificate.name} enviado para backend.`,
+          description: `Certificado ${newCertificate.name} enviado para backend.`
         });
 
-        // Opcional: Adiciona localmente no frontend (com os dados mínimos)
         const certificate: Certificate = {
           id: Date.now().toString(),
           name: newCertificate.name,
@@ -117,71 +146,36 @@ export function CertificateManager({
           status: 'valid',
           subject: '',
           serialNumber: '',
-          filePath: newCertificate.filePath,
+          filePath: newCertificate.filePath
         };
         onCertificateAdd(certificate);
 
-        // Limpa estados e fecha modal
         setNewCertificate({ name: '', filePath: '', password: '' });
         setFileObject(null);
         setIsDialogOpen(false);
-
       } else {
         toast({
           title: 'Erro',
           description: result.error || 'Falha no upload do certificado',
-          variant: 'destructive',
+          variant: 'destructive'
         });
       }
     } catch (error) {
       toast({
         title: 'Erro',
         description: 'Erro ao enviar certificado para o backend',
-        variant: 'destructive',
+        variant: 'destructive'
       });
+    } finally {
+      setIsValidating(false);
     }
   };
-
-
-
-  const validateAndAddCertificate = () => {
-    if (!newCertificate.name || !newCertificate.filePath || !newCertificate.password) {
-      toast({
-        title: "Erro",
-        description: "Todos os campos são obrigatórios.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const certificate: Certificate = {
-      id: Date.now().toString(),
-      name: newCertificate.name,
-      issuer: '',
-      validUntil: '',
-      validFrom: '',
-      status: 'valid',  // ou você pode criar um status padrão
-      subject: '',
-      serialNumber: '',
-      filePath: newCertificate.filePath
-    };
-
-    onCertificateAdd(certificate);
-    setNewCertificate({ name: '', filePath: '', password: '' });
-    setIsDialogOpen(false);
-
-    toast({
-      title: "Certificado adicionado",
-      description: `Certificado ${certificate.name} foi adicionado com sucesso.`,
-    });
-  };
-
 
   const handleRemoveCertificate = (id: string) => {
     onCertificateRemove(id);
     toast({
-      title: "Certificado removido",
-      description: "O certificado foi removido com sucesso.",
+      title: 'Certificado removido',
+      description: 'O certificado foi removido com sucesso.'
     });
   };
 
@@ -201,9 +195,17 @@ export function CertificateManager({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'valid':
-        return <Badge variant="secondary" className="bg-success text-success-foreground">Válido</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-success text-success-foreground">
+            Válido
+          </Badge>
+        );
       case 'warning':
-        return <Badge variant="secondary" className="bg-warning text-warning-foreground">Expira em breve</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-warning text-warning-foreground">
+            Expira em breve
+          </Badge>
+        );
       case 'expired':
         return <Badge variant="destructive">Expirado</Badge>;
       default:
@@ -242,7 +244,9 @@ export function CertificateManager({
                     <Input
                       id="cert-name"
                       value={newCertificate.name}
-                      onChange={(e) => setNewCertificate({ ...newCertificate, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewCertificate({ ...newCertificate, name: e.target.value })
+                      }
                       placeholder="Ex: Certificado da Empresa XYZ"
                     />
                   </div>
@@ -270,7 +274,9 @@ export function CertificateManager({
                       id="cert-password"
                       type="password"
                       value={newCertificate.password}
-                      onChange={(e) => setNewCertificate({ ...newCertificate, password: e.target.value })}
+                      onChange={(e) =>
+                        setNewCertificate({ ...newCertificate, password: e.target.value })
+                      }
                       placeholder="Digite a senha do certificado"
                     />
                   </div>
@@ -303,22 +309,19 @@ export function CertificateManager({
           ) : (
             <div className="space-y-4">
               {certificates.map((cert) => (
-                <div key={cert.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div
+                  key={cert.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(cert.status)}
-                    </div>
+                    <div className="flex items-center gap-2">{getStatusIcon(cert.status)}</div>
                     <div className="space-y-1">
                       <h4 className="font-medium">{cert.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Emissor: {cert.issuer}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Emissor: {cert.issuer}</p>
                       <p className="text-sm text-muted-foreground">
                         Válido de {cert.validFrom} até {cert.validUntil}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        Série: {cert.serialNumber}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Série: {cert.serialNumber}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -340,8 +343,8 @@ export function CertificateManager({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza de que deseja remover o certificado "{cert.name}"?
-                            Esta ação não pode ser desfeita.
+                            Tem certeza de que deseja remover o certificado "{cert.name}"? Esta ação não
+                            pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
