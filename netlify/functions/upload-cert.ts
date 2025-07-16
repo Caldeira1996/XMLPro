@@ -2,6 +2,7 @@ import { Handler } from '@netlify/functions';
 import https from 'https';
 import { sefazApi } from '../../src/services/sefazApi'; // ajuste o caminho conforme seu projeto
 import forge from 'node-forge';
+import { configurarCertificado } from '../../src/utils/certificadoConfig';
 
 interface RequestBody {
   certFileBase64: string;
@@ -85,10 +86,12 @@ export const handler: Handler = async (event, context) => {
     currentCertificate = { pfxBuffer, password, name };
 
     // Ativa o certificado no sefazApi para as próximas requisições
-    sefazApi.setCertificate({
-      pfxBuffer,
-      password,
-    });
+    // sefazApi.setCertificate({
+    //   pfxBuffer,
+    //   password,
+    // });
+
+    configurarCertificado(pfxBuffer, password)
 
     return {
       statusCode: 200,
