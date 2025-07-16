@@ -148,42 +148,77 @@ export default function XmlDashboard() {
     }
   };
 
+  // const handleCertificateAdd = async (certificate: Certificate) => {
+  //   setCertificates([...certificates, certificate]);
+  // };
+
   const handleCertificateAdd = async (certificate: Certificate) => {
-    setCertificates([...certificates, certificate]);
-  };
+  try {
+    // 1. Validação básica do certificado
+    if (!certificate.serialNumber || !certificate.filePath) {
+      toast({
+        title: "Certificado inválido",
+        description: "O certificado não possui todos os campos necessários.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-//   const handleCertificateAdd = async (certificate: Certificate) => {
-//   try {
-//     // Verifica se o certificado já existe
-//     if (certificates.some(c => c.serialNumber === certificate.serialNumber)) {
-//       toast({
-//         title: "Certificado já existe",
-//         description: "Este certificado já foi adicionado anteriormente.",
-//         variant: "destructive"
-//       });
-//       return;
-//     }
+    // 2. Verifica duplicatas usando serialNumber (mais confiável que ID)
+    const certificateExists = certificates.some(
+      c => c.serialNumber === certificate.serialNumber
+    );
 
-//     // Adiciona à lista de certificados
-//     setCertificates(prev => [...prev, certificate]);
+    if (certificateExists) {
+      toast({
+        title: "Certificado duplicado",
+        description: "Este certificado já foi adicionado anteriormente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // 3. Atualização otimizada do estado
+    setCertificates(prev => {
+      const newCertificates = [...prev, certificate];
+      console.log("Novo estado de certificados:", newCertificates); // Debug
+      return newCertificates;
+    });
+
+    // 4. Configuração automática se for o primeiro certificado
+    if (certificates.length === 0) {
+      setSelectedCertificate(certificate.id);
+      try {
+        await sefazApi.setCertificate({
+          pfxPath: certificate.filePath,
+          password: 'senha_armazenada', // Em produção, use um gerenciador seguro de senhas
+          alias: certificate.name
+        });
+        setIsConnected(true);
+      } catch (error) {
+        console.error("Erro na configuração automática:", error);
+      }
+    }
+
+    // 5. Feedback visual
+    toast({
+      title: "Certificado adicionado",
+      description: `Certificado ${certificate.name} foi importado com sucesso.`,
+    });
+
+  } catch (error) {
+    console.error("Erro ao adicionar certificado:", error);
     
-//     // Configura automaticamente se for o primeiro certificado
-//     if (certificates.length === 0) {
-//       setSelectedCertificate(certificate.id);
-//     }
-
-//     toast({
-//       title: "Certificado adicionado",
-//       description: "O certificado foi adicionado com sucesso à lista.",
-//     });
-//   } catch (error) {
-//     toast({
-//       title: "Erro ao adicionar certificado",
-//       description: "Ocorreu um erro ao adicionar o certificado.",
-//       variant: "destructive"
-//     });
-//   }
-// };
+    // Reverte a adição em caso de erro
+    setCertificates(prev => prev.filter(c => c.id !== certificate.id));
+    
+    toast({
+      title: "Falha na importação",
+      description: "Ocorreu um erro ao processar o certificado digital.",
+      variant: "destructive"
+    });
+  }
+};
 
   const handleCertificateRemove = (id: string) => {
     setCertificates(certificates.filter(c => c.id !== id));

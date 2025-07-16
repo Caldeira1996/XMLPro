@@ -55,7 +55,7 @@ interface Certificate {
 
 interface CertificateManagerProps {
   certificates: Certificate[];
-  onCertificateAdd: (certificate: Certificate) => void;
+  onCertificateAdd: (certificate: Certificate) => Promise<void>;
   onCertificateRemove: (id: string) => void;
   onCertificateSelect: (id: string) => void;
   selectedCertificate: string;
