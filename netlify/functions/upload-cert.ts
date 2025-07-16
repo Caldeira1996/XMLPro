@@ -1,11 +1,15 @@
 import { Handler } from '@netlify/functions';
 import https from 'https';
+import { sefazApi } from '../../src/services/sefazApi'; // ajuste o caminho conforme seu projeto
 
 interface RequestBody {
   certFileBase64: string;
   password: string;
   name: string;
 }
+
+// Variável global para armazenar o certificado em memória (exemplo simples)
+let currentCertificate: { pfxBuffer: Buffer; password: string; name: string } | null = null;
 
 export const handler: Handler = async (event, context) => {
   try {
@@ -32,25 +36,34 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    // Converte o base64 para buffer
+    // Converte base64 para Buffer
     const pfxBuffer = Buffer.from(certFileBase64, 'base64');
 
-    // Cria o https agent com o certificado e senha (exemplo, você pode fazer sua lógica aqui)
+    // Criar https.Agent só pra testar certificado (opcional)
     const agent = new https.Agent({
       pfx: pfxBuffer,
       passphrase: password,
-      rejectUnauthorized: false, // só para teste, cuidado em produção
+      rejectUnauthorized: false, // cuidado em produção
     });
 
-    // Aqui você poderia fazer uma requisição usando esse agent para validar o certificado
+    // Aqui você poderia fazer uma requisição teste à SEFAZ usando esse agent pra validar certificado
+    // Por enquanto, vamos assumir que está válido se chegou aqui
 
-    // Resposta de sucesso
+    // Armazena o certificado na variável global
+    currentCertificate = { pfxBuffer, password, name };
+
+    // Ativa o certificado no sefazApi para as próximas requisições
+    sefazApi.setCertificate({
+      pfxBuffer,
+      password,
+    });
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, message: `Certificado ${name} recebido com sucesso!` }),
+      body: JSON.stringify({ success: true, message: `Certificado ${name} recebido e ativado com sucesso!` }),
     };
   } catch (error) {
-    console.error(error);
+    console.error('Erro no upload-cert:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ success: false, error: 'Erro ao processar certificado' }),

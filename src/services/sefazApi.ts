@@ -10,7 +10,7 @@ interface SefazApiConfig {
 
 interface CertificateConfig {
   pfxBuffer?: Buffer; 
-  pfxPath: string;
+  pfxPath?: string;
   password: string;
   alias?: string;
 }
