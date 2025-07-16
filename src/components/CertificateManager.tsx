@@ -93,7 +93,8 @@ export function CertificateManager({
     formData.append('name', newCertificate.name);
 
     try {
-      const response = await fetch('/api/upload-cert', {
+      // const response = await fetch('/api/upload-cert', {
+      const response = await fetch('http://localhost:8080/api/upload-cert', {
         method: 'POST',
         body: formData,
       });
