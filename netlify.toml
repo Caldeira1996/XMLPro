@@ -8,5 +8,8 @@ directory = "netlify/functions"
 node_bundler = "esbuild"
 included_files = ["src/**/*"]
 
+[functions."upload-cert"]
+  external_node_modules = ["node-forge"]
+
 [build.environment]
   NODE_VERSION = "18"
