@@ -1,8 +1,8 @@
 import { Handler } from '@netlify/functions';
 import https from 'https';
-import { sefazApi } from '../../src/services/sefazApi'; // ajuste o caminho conforme seu projeto
+import { sefazApi } from '@/services/sefazApi';
+import { validarCertificadoPfx } from '@/utils/certificadoConfig'; // ajuste o caminho conforme seu projeto
 import forge from 'node-forge';
-import { validarCertificadoPfx } from '../../src/utils/certificadoConfig';
 import { Buffer } from 'buffer';
 
 interface RequestBody {
@@ -40,7 +40,9 @@ export const handler: Handler = async (event, context) => {
     }
 
     // Converte base64 para Buffer
-    const pfxBuffer = Buffer.from(certFileBase64, 'base64');
+    //const pfxBuffer = Buffer.from(certFileBase64, 'base64');
+    const pfxBuffer = globalThis.Buffer.from(certFileBase64, 'base64');
+
 
     // Opcional: criar https.Agent para testar certificado
     const agent = new https.Agent({
