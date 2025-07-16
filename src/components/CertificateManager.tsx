@@ -132,10 +132,10 @@ export function CertificateManager({
     const result = await response.json();
     console.log('Upload result:', result);
 
-    if (!result.success) {
+    if (!result.success || !result.conectado) {
       toast({
         title: 'Erro',
-        description: result.error || 'Falha no upload do certificado',
+        description: result.error || 'Certificado enviado, mas conexão com a SEFAZ falhou.',
         variant: 'destructive'
       });
       setIsValidating(false);
@@ -165,7 +165,7 @@ export function CertificateManager({
       issuer: result.data.issuer,
       validUntil: result.data.validUntil,
       validFrom: result.data.validFrom,
-      status: 'valid',
+      status: result.conectado ? 'valid' : 'expired',
       subject: result.data.subject,
       serialNumber: result.data.serialNumber,
       filePath: newCertificate.filePath

@@ -112,7 +112,7 @@ export default function XmlDashboard() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [xmlData, setXmlData] = useState<XmlItem[]>(mockXmlData);
   const [filteredData, setFilteredData] = useState<XmlItem[]>(mockXmlData);
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

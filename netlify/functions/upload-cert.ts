@@ -108,10 +108,14 @@ try {
     currentCertificate = { pfxBuffer, password, name };
 
     // Ativa o certificado no sefazApi para as próximas requisições
-    // sefazApi.setCertificate({
-    //   pfxBuffer,
-    //   password,
-    // });
+    sefazApi.setCertificate({
+      pfxBuffer,
+      password,
+    });
+
+    // Testa conexão com a SEFAZ-SP
+    const testeConexao = await sefazApi.testarConexao();
+    const conectado = testeConexao.success;
 
     validarCertificadoPfx(pfxBuffer, password)
 
@@ -119,6 +123,7 @@ try {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
+        conectado, // <= essa flag define se o backend conseguiu autenticar na SEFAZ SP
         message: `Certificado ${name} recebido e ativado com sucesso!`,
         data: {
           issuer,
