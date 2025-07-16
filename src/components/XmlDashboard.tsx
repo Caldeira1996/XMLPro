@@ -148,42 +148,42 @@ export default function XmlDashboard() {
     }
   };
 
-  // const handleCertificateAdd = async (certificate: Certificate) => {
-  //   setCertificates([...certificates, certificate]);
-  // };
-
   const handleCertificateAdd = async (certificate: Certificate) => {
-  try {
-    // Verifica se o certificado já existe
-    if (certificates.some(c => c.serialNumber === certificate.serialNumber)) {
-      toast({
-        title: "Certificado já existe",
-        description: "Este certificado já foi adicionado anteriormente.",
-        variant: "destructive"
-      });
-      return;
-    }
+    setCertificates([...certificates, certificate]);
+  };
 
-    // Adiciona à lista de certificados
-    setCertificates(prev => [...prev, certificate]);
+//   const handleCertificateAdd = async (certificate: Certificate) => {
+//   try {
+//     // Verifica se o certificado já existe
+//     if (certificates.some(c => c.serialNumber === certificate.serialNumber)) {
+//       toast({
+//         title: "Certificado já existe",
+//         description: "Este certificado já foi adicionado anteriormente.",
+//         variant: "destructive"
+//       });
+//       return;
+//     }
+
+//     // Adiciona à lista de certificados
+//     setCertificates(prev => [...prev, certificate]);
     
-    // Configura automaticamente se for o primeiro certificado
-    if (certificates.length === 0) {
-      setSelectedCertificate(certificate.id);
-    }
+//     // Configura automaticamente se for o primeiro certificado
+//     if (certificates.length === 0) {
+//       setSelectedCertificate(certificate.id);
+//     }
 
-    toast({
-      title: "Certificado adicionado",
-      description: "O certificado foi adicionado com sucesso à lista.",
-    });
-  } catch (error) {
-    toast({
-      title: "Erro ao adicionar certificado",
-      description: "Ocorreu um erro ao adicionar o certificado.",
-      variant: "destructive"
-    });
-  }
-};
+//     toast({
+//       title: "Certificado adicionado",
+//       description: "O certificado foi adicionado com sucesso à lista.",
+//     });
+//   } catch (error) {
+//     toast({
+//       title: "Erro ao adicionar certificado",
+//       description: "Ocorreu um erro ao adicionar o certificado.",
+//       variant: "destructive"
+//     });
+//   }
+// };
 
   const handleCertificateRemove = (id: string) => {
     setCertificates(certificates.filter(c => c.id !== id));
