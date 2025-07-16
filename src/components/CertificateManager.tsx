@@ -168,7 +168,7 @@ export function CertificateManager({
           filePath: newCertificate.filePath
         };
 
-        onCertificateAdd(certificate);
+        await onCertificateAdd(certificate);
         setNewCertificate({ name: '', filePath: '', password: '' });
         setFileObject(null);
         setIsDialogOpen(false);
