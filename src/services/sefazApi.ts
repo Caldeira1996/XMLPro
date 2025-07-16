@@ -69,7 +69,7 @@ class SefazApiService {
   // }
 
 constructor() {
-  //this.api = this.createAxiosInstance();
+  this.api = this.createAxiosInstance();
 }
 
 private createAxiosInstance(): AxiosInstance {
@@ -100,7 +100,7 @@ private createHttpsAgent(certificate: CertificateConfig): https.Agent {
   return new https.Agent({
     pfx,
     passphrase: certificate.password,
-    rejectUnauthorized: true,
+    rejectUnauthorized: false,
   });
 }
 
@@ -300,10 +300,9 @@ public setCertificate(certificate: CertificateConfig): void {
     try {
     // Chave de acesso fictícia, apenas para testar handshake SSL com certificado
     const chaveFake = '99999999999999999999999999999999999999999999';
-
     const envelope = this.buildDownloadSoapEnvelope({ chaveAcesso: chaveFake });
 
-    const response = await this.api.post('', envelope, {
+    await this.api.post('', envelope, {
       headers: {
         'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NfeDownload/nfeDownloadNF'
       }
@@ -316,9 +315,23 @@ public setCertificate(certificate: CertificateConfig): void {
     };
 
     } catch (error) {
+    console.error('❌ Erro ao tentar conectar com a SEFAZ:');
+    console.error(error);
+
+    if (axios.isAxiosError(error)) {
+      console.error('📋 Detalhes do erro Axios:', {
+        message: error.message,
+        code: error.code,
+        responseStatus: error.response?.status,
+        responseData: error.response?.data,
+        headers: error.response?.headers,
+      });
+    }
+
     return {
       success: false,
-      error: 'Erro ao estabelecer conexão com a SEFAZ usando o certificado: ' + (error instanceof Error ? error.message : 'erro desconhecido')
+      error: 'Erro ao estabelecer conexão com a SEFAZ usando o certificado: ' +
+        (error instanceof Error ? error.message : 'erro desconhecido'),
     };
     }
   }
