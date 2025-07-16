@@ -50,25 +50,25 @@ export const handler: Handler = async (event, context) => {
 
     // Extrai dados do certificado usando node-forge
     let issuer = '';
-let subject = '';
-let serialNumber = '';
-let validFrom = '';
-let validUntil = '';
+    let subject = '';
+    let serialNumber = '';
+    let validFrom = '';
+    let validUntil = '';
 
-try {
-  const certData = validarCertificadoPfx(pfxBuffer, password);
-  issuer = certData.issuer;
-  subject = certData.subject;
-  serialNumber = certData.serialNumber;
-  validFrom = certData.validFrom.split('T')[0];
-  validUntil = certData.validTo.split('T')[0];
-} catch (err) {
-  console.error('Erro ao validar certificado:', err);
-  return {
-    statusCode: 400,
-    body: JSON.stringify({ success: false, error: 'Certificado inválido ou senha incorreta' }),
-  };
-}
+    try {
+      const certData = validarCertificadoPfx(pfxBuffer, password);
+      issuer = certData.issuer;
+      subject = certData.subject;
+      serialNumber = certData.serialNumber;
+      validFrom = certData.validFrom.split('T')[0];
+      validUntil = certData.validTo.split('T')[0];
+    } catch (err) {
+      console.error('Erro ao validar certificado:', err);
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ success: false, error: 'Certificado inválido ou senha incorreta' }),
+      };
+    }
 
 
     // let issuer = '';
