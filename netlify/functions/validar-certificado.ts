@@ -34,10 +34,10 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    const pfxBuffer = Buffer.from(certificateBase64, 'base64'); // Agora funciona
+    const pfxBuffer = Buffer.from(certificateBase64, 'base64'); // ✅ correto!
 
     try {
-      const pfxDer = pfxBuffer.toString('binary');
+      const pfxDer = pfxBuffer.toString('binary');                // ✅ funciona com Buffer
       const pfxAsn1 = forge.asn1.fromDer(pfxDer);
       const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password);
 
