@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import forge from 'node-forge';
 import https from 'https';
 import axios from 'axios';
-import { Buffer } from 'buffer';
+import { Buffer } from 'buffer'; // 👈 IMPORTANTE
 
 interface RequestBody {
   certificateBase64: string;
@@ -34,11 +34,8 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    // Converte base64 para Buffer
-    const pfxBuffer = Buffer.from(certificateBase64, 'base64'); // MAS adicione a importação abaixo se necessário
+    const pfxBuffer = Buffer.from(certificateBase64, 'base64'); // Agora funciona
 
-
-    // Valida certificado usando node-forge
     try {
       const pfxDer = pfxBuffer.toString('binary');
       const pfxAsn1 = forge.asn1.fromDer(pfxDer);
@@ -50,7 +47,7 @@ export const handler: Handler = async (event, context) => {
       if (!certBag?.cert) {
         throw new Error('Certificado não encontrado no PFX');
       }
-      
+
       const cert = certBag.cert;
       
       return {
