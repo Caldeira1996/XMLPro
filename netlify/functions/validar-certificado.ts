@@ -2,6 +2,7 @@ import { Handler } from '@netlify/functions';
 import forge from 'node-forge';
 import https from 'https';
 import axios from 'axios';
+import { Buffer } from 'buffer';
 
 interface RequestBody {
   certificateBase64: string;
@@ -34,7 +35,8 @@ export const handler: Handler = async (event, context) => {
     }
 
     // Converte base64 para Buffer
-    const pfxBuffer = Buffer.from(certificateBase64, 'base64');
+    const pfxBuffer = Buffer.from(certificateBase64, 'base64'); // MAS adicione a importação abaixo se necessário
+
 
     // Valida certificado usando node-forge
     try {
