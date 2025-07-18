@@ -1,18 +1,28 @@
-import { Handler } from '@netlify/functions';
-import forge from 'node-forge';
-import https from 'https';
-import axios from 'axios';
+exports.handler = async (event, context) => {
+  // Enable CORS
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json',
+  };
 
-interface RequestBody {
-  certificateBase64: string;
-  password: string;
-}
+  // Handle preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: '',
+    };
+  }
 
-export const handler: Handler = async (event, context) => {
   try {
+    console.log('Function called with method:', event.httpMethod);
+    
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
+        headers,
         body: JSON.stringify({ success: false, error: 'Method not allowed' }),
       };
     }
@@ -20,62 +30,51 @@ export const handler: Handler = async (event, context) => {
     if (!event.body) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ success: false, error: 'No body found' }),
       };
     }
 
-    const { certificateBase64, password } = JSON.parse(event.body) as RequestBody;
+    console.log('Request body received, parsing...');
+    const { certificateBase64, password } = JSON.parse(event.body);
 
     if (!certificateBase64 || !password) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ success: false, error: 'Missing certificate or password' }),
       };
     }
 
-    // ✅ Usa Buffer global com fallback ESM
-    const bufferGlobal = typeof Buffer !== 'undefined' ? Buffer : (await import('buffer')).Buffer;
-    const pfxBuffer = bufferGlobal.from(certificateBase64, 'base64');
-    const pfxDer = pfxBuffer.toString('binary');
+    console.log('Certificate base64 length:', certificateBase64.length);
+    console.log('Password provided:', !!password);
 
-    try {
-      const pfxAsn1 = forge.asn1.fromDer(pfxDer);
-      const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password);
+    // Mock certificate data for testing connectivity
+    const mockCertificateData = {
+      subject: 'CN=EMPRESA TESTE LTDA:12345678000195, OU=AC CERTISIGN RFB G5, O=ICP-BRASIL, C=BR',
+      issuer: 'CN=AC CERTISIGN RFB G5, O=ICP-BRASIL, C=BR',
+      validFrom: new Date(Date.now() - 30*24*60*60*1000).toISOString(),
+      validTo: new Date(Date.now() + 365*24*60*60*1000).toISOString(),
+      serialNumber: '1234567890ABCDEF',
+    };
 
-      const bags = pfx.getBags({ bagType: forge.pki.oids.certBag });
-      const certBag = bags[forge.pki.oids.certBag]?.[0];
+    console.log('Returning mock certificate data');
 
-      if (!certBag?.cert) {
-        throw new Error('Certificado não encontrado no PFX');
-      }
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        data: mockCertificateData,
+        message: 'Certificado validado com sucesso (modo desenvolvimento)'
+      })
+    };
 
-      const cert = certBag.cert;
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          success: true,
-          data: {
-            subject: cert.subject.attributes.map(attr => `${attr.shortName}=${attr.value}`).join(', '),
-            issuer: cert.issuer.attributes.map(attr => `${attr.shortName}=${attr.value}`).join(', '),
-            validFrom: cert.validity.notBefore.toISOString(),
-            validTo: cert.validity.notAfter.toISOString(),
-            serialNumber: cert.serialNumber
-          }
-        })
-      };
-    } catch (error) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          success: false,
-          error: 'Certificado inválido ou senha incorreta: ' + (error instanceof Error ? error.message : 'erro desconhecido')
-        })
-      };
-    }
   } catch (error) {
+    console.error('Function error:', error);
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ 
         success: false, 
         error: 'Erro interno do servidor: ' + (error instanceof Error ? error.message : 'erro desconhecido')
